@@ -57,13 +57,13 @@ class TsTCPDF extends \TCPDF
 
     public function header()
     {
-        if ($this->pdfSettings[$this->pdfType]) {
-            if ($this->pdfSettings[$this->pdfType]['header']) {
-                if ($this->pdfSettings[$this->pdfType]['fontSize']) {
+        if (!empty($this->pdfSettings[$this->pdfType])) {
+            if (!empty($this->pdfSettings[$this->pdfType]['header'])) {
+                if (!empty($this->pdfSettings[$this->pdfType]['fontSize'])) {
                     $this->SetFontSize($this->pdfSettings[$this->pdfType]['fontSize']);
                 }
 
-                if ($this->pdfSettings[$this->pdfType]['header']['html']) {
+                if (is_array($this->pdfSettings[$this->pdfType]['header']['html'] ?? null)) {
                     foreach ($this->pdfSettings[$this->pdfType]['header']['html'] as $partName => $partConfig) {
                         $this->renderStandaloneView(
                             $this->pdfSettings[$this->pdfType]['header']['html'][$partName]['templatePath'],
@@ -73,7 +73,7 @@ class TsTCPDF extends \TCPDF
                     }
                 }
 
-                if ($this->pdfSettings[$this->pdfType]['header']['line']) {
+                if (is_array($this->pdfSettings[$this->pdfType]['header']['line'] ?? null)) {
                     foreach ($this->pdfSettings[$this->pdfType]['header']['line'] as $partName => $partConfig) {
                         $this->Line(
                             $partConfig['x1'],
@@ -90,13 +90,13 @@ class TsTCPDF extends \TCPDF
 
     public function footer()
     {
-        if ($this->pdfSettings[$this->pdfType]) {
-            if ($this->pdfSettings[$this->pdfType]['footer']) {
-                if ($this->pdfSettings[$this->pdfType]['fontSize']) {
+        if (!empty($this->pdfSettings[$this->pdfType])) {
+            if (!empty($this->pdfSettings[$this->pdfType]['footer'])) {
+                if (!empty($this->pdfSettings[$this->pdfType]['fontSize'])) {
                     $this->SetFontSize($this->pdfSettings[$this->pdfType]['fontSize']);
                 }
 
-                if ($this->pdfSettings[$this->pdfType]['footer']['html']) {
+                if (is_array($this->pdfSettings[$this->pdfType]['footer']['html'] ?? null)) {
                     foreach ($this->pdfSettings[$this->pdfType]['footer']['html'] as $partName => $partConfig) {
                         $this->renderStandaloneView(
                             $this->pdfSettings[$this->pdfType]['footer']['html'][$partName]['templatePath'],
@@ -106,7 +106,7 @@ class TsTCPDF extends \TCPDF
                     }
                 }
 
-                if ($this->pdfSettings[$this->pdfType]['footer']['line']) {
+                if (is_array($this->pdfSettings[$this->pdfType]['footer']['line'] ?? null)) {
                     foreach ($this->pdfSettings[$this->pdfType]['footer']['line'] as $partName => $partConfig) {
                         $this->Line(
                             $partConfig['x1'],
@@ -137,15 +137,15 @@ class TsTCPDF extends \TCPDF
     ) {
         $view = $this->getStandaloneView($templatePath, ucfirst($type));
 
-        if ($config['file']) {
+        if (!empty($config['file'])) {
             $file = GeneralUtility::getFileAbsFileName(
                 $config['file']
             );
             $view->assign('file', $file);
-            if ($config['width']) {
+            if (!empty($config['width'])) {
                 $view->assign('width', $config['width']);
             }
-            if ($config['height']) {
+            if (!empty($config['height'])) {
                 $view->assign('heigth', $config['heigth']);
             }
         }
@@ -156,7 +156,7 @@ class TsTCPDF extends \TCPDF
 
         $view->assignMultiple($assignToView);
 
-        $content = $view->render();
+        $content = (string)$view->render();
         $content = trim(preg_replace('~[\n]+~', '', $content));
 
         $this->writeHtmlCellWithConfig($content, $config);
@@ -172,21 +172,21 @@ class TsTCPDF extends \TCPDF
     {
         $width = $config['width'];
         $height = 0;
-        if ($config['height']) {
-            $height = $config['height'];
+        if (!empty($config['height'])) {
+            $height = (int)$config['height'];
         }
-        $positionX = $config['positionX'];
-        $positionY = $config['positionY'];
+        $positionX = $config['positionX'] ?? '0';
+        $positionY = $config['positionY'] ?? '0';
         $align = 'L';
-        if ($config['align']) {
+        if (!empty($config['align'])) {
             $align = $config['align'];
         }
 
         $oldFontSize = $this->getFontSizePt();
-        if ($config['fontSize']) {
+        if (!empty($config['fontSize'])) {
             $this->SetFontSize($config['fontSize']);
         }
-        if ($config['spacingY']) {
+        if (!empty($config['spacingY'])) {
             $this->setY($this->getY() + $config['spacingY']);
         }
 
@@ -204,7 +204,7 @@ class TsTCPDF extends \TCPDF
             true
         );
 
-        if ($config['fontSize']) {
+        if (!empty($config['fontSize'])) {
             $this->SetFontSize($oldFontSize);
         }
     }
@@ -230,24 +230,25 @@ class TsTCPDF extends \TCPDF
             $view->setLayoutRootPaths($this->pdfSettings['view']['layoutRootPaths']);
             $view->setPartialRootPaths($this->pdfSettings['view']['partialRootPaths']);
 
-            if ($this->pdfSettings['view']['templateRootPaths']) {
-                foreach ($this->pdfSettings['view']['templateRootPaths'] as $pathNameKey => $pathNameValue) {
-                    $templateRootPath = GeneralUtility::getFileAbsFileName(
-                        $pathNameValue
-                    );
+            if (is_array($this->pdfSettings['view']['templateRootPaths'] ?? null)) {
+                $paths = $this->pdfSettings['view']['templateRootPaths'];
+                ksort($paths);
+                $paths = array_reverse($paths);
 
+                foreach ($paths as $pathNameValue) {
+                    $templateRootPath = GeneralUtility::getFileAbsFileName($pathNameValue);
                     $completePath = $templateRootPath . $templatePathAndFileName;
+
                     if (file_exists($completePath)) {
                         $view->setTemplatePathAndFilename($completePath);
+                        break;
                     }
                 }
             }
         }
 
         if (!$view->getTemplatePathAndFilename()) {
-            $logManager = GeneralUtility::makeInstance(
-                \TYPO3\CMS\Core\Log\LogManagerInterface::class
-            );
+            $logManager = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Log\LogManager::class);
             $logger = $logManager->getLogger(__CLASS__);
             $logger->error(
                 'Cannot find Template for PdfService',
